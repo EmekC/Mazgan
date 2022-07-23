@@ -50,9 +50,11 @@ DHT dht(TEMP_GPIO, DHTTYPE);
 #define V_SWITCH V8
 #define V_FAN V9
 #define V_FAN_BTN V10
+#define AC_MODE V11
 #define MIN_TEMP 16
 #define MAX_TEMP 31
 #define UPDATE_INTERVAL 5000L
+// enums for Blynk Virtual Button
 #define FAN_LOW 0
 #define FAN_MED 1
 #define FAN_HIGH 2
@@ -69,7 +71,8 @@ u_int8_t temp_b;
 IRCoolixAC ac(IR_GPIO);
 
 int temp = MIN_TEMP;
-int fan = FAN_MED;
+int fan = kCoolixFanMed;
+uint8_t mode = kCoolixCool;
 
 #define BUTTON_COOLDOWN 1000L
 
@@ -80,10 +83,8 @@ void updateColorProperty(int celcius) {
   // Linear equation where (16, 0) and (31, 1) are met.
   double percentage = 0.0666*celcius - 1.06666;
 
-  Serial.printf("Percentage: %2.1f\n\n\n", percentage);
-
-  TempColor color_blue(255, 0, 0, 255);
-  TempColor color_red(255, 255, 0, 0);
+  TempColor color_blue(255, 32, 82, 235);
+  TempColor color_red(255, 255, 74, 102);
 
   TempColor propertyColor = clrCnvrt.GradientPick(percentage, color_blue, color_red);
 
@@ -136,10 +137,10 @@ void setupAC() {
 
 void turnOnAC() {
   flashLED();
-  // ac.setPowerToggle(true);
+
   ac.begin();
   ac.setTemp(temp);
-  ac.setMode(kCoolixCool);
+  ac.setMode(mode);
   ac.setFan(fan);
   ac.clearSensorTemp();
   ac.on();
@@ -150,6 +151,7 @@ void turnOnAC() {
 void turnOffAC() {
   flashLED();
   // ac.setPowerToggle(false);
+  ac.begin();
   ac.off();
   ac.send();
   printState();
@@ -193,32 +195,28 @@ void sendFanUpdate(int fan) {
   ac.send();
 }
 
+// Update temeprature value.
 void sendTempUpdate(int value) {
-
-
-
   ac.begin();
   ac.setTemp(value);
   ac.send();
-
 } 
 
+// Update Air Conditioner mode.
+void sendACMode(uint8_t mode) {
+  ac.begin();
+  ac.setMode(mode);
+  ac.send();
+}
 // ============= READ BUTTONS FROM BLYNK =============
-bool isFirstConnect = true;
+
 BLYNK_CONNECTED() {
+  // Blynk.syncVirtual(V_TEMP);
+  // Request server to re-send latest values for all pins
+  Serial.println("==============================\nSyncing all Blynk connections.\n==============================\n");
+  Blynk.syncAll();
   digitalWrite(WIFI_LED_GPIO, HIGH);
-
-  // get rtc from Blykn
-  Blynk.sendInternal("rtc", "sync");
-
-  Blynk.syncVirtual(V_TEMP);
-
-  if (isFirstConnect) {
-    // Request server to re-send latest values for all pins
-    Serial.println("==============================\nSyncing all Blynk connections.\n==============================\n");
-    Blynk.syncAll();
-    isFirstConnect = false;
-  }
+  
 }
 
 // read temp
@@ -231,6 +229,8 @@ BLYNK_WRITE(V_TEMP) {
 
   Serial.println("Read temperature param: " + value);
   Serial.print("\n");
+
+  updateColorProperty(temp);
 }
 // temp increase
 bool pkuda = false;
@@ -279,12 +279,14 @@ BLYNK_WRITE(V_DEC) {
 // toggle
 BLYNK_WRITE(V_SWITCH) {
 
-  String value = param.asString();
+  uint8_t value = param.asInt();
   
-  if (value == "1") {
-    turnOnAC();
+  if (value) {
+    if (!ac.getPower())
+      turnOnAC();
   } else {
-    turnOffAC();
+    if (ac.getPower())
+      turnOffAC();
   }
 
 }
@@ -310,10 +312,34 @@ BLYNK_WRITE(V_FAN_BTN) {
 }
 
 // sync fan with Blynk
-BLYNK_WRITE(V_FAN) {
+// BLYNK_WRITE(V_FAN) {
+//   uint8_t value = param.asInt();
+
+//   Serial.println("fan is currently: " + value);
+
+//   fan = value;
+// }
+
+
+// Cool/Heat mode switch
+BLYNK_WRITE(AC_MODE) {
   int value = param.asInt();
 
-  fan = value;
+  // if AC is off. dont do shit
+  if (!ac.getPower()) {return;}
+
+  if (value) {
+    // Cool
+    mode = kCoolixCool;
+    sendACMode(mode);
+
+  } else {
+    // Heat
+    mode = kCoolixHeat;
+    sendACMode(mode);
+  }
+
+  printState();
 }
 
 void setup() {
