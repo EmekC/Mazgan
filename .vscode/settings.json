@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "electraacremoteencoder.h": "c",
+        "random": "cpp"
+    }
+}
