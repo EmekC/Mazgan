@@ -371,14 +371,17 @@ void loop() {
   Blynk.run();
   timer.run();
 
-  // Wait BUTTON_COOLDOWN time since last button click until sending order.
-  if ((millis() - sinceLastPress) >= BUTTON_COOLDOWN && pkuda) {
-    sendTempUpdate(temp);
-    pkuda = false;
-  }
+  // if AC is turned on continue...
+  if (ac.getPower()) {
+    // Wait BUTTON_COOLDOWN time since last button click until sending order.
+    if ((millis() - sinceLastPress) >= BUTTON_COOLDOWN && pkuda) {
+      sendTempUpdate(temp);
+      pkuda = false;
+    }
 
-  if (pkuda_fan && (millis() - sinceLastPress) >= BUTTON_COOLDOWN) {
-    sendFanUpdate(fan);
-    pkuda_fan = false;
+    if (pkuda_fan && (millis() - sinceLastPress) >= BUTTON_COOLDOWN) {
+      sendFanUpdate(fan);
+      pkuda_fan = false;
+    }
   }
 }
