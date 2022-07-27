@@ -165,47 +165,6 @@ void turnOffAC() {
   printState();
 }
 
-bool isTooHumid() {
-  return humid > 60.0f;
-}
-
-void handleTemperatureControl() {
-
-  if (shouldHandleTemp) {
-    float tempDiffer = dht_temp - temp;
-    if (abs(tempDiffer) > 2) {
-      if (isTooHumid) {
-        Blynk.virtualWrite(V_FAN, FAN_HIGH);
-      } else {
-        if (tempDiffer < 0) {
-          // higher temp than desired
-          Blynk.virtualWrite(V_FAN, FAN_LOW);
-        } else {
-          // lower temp than desired.
-          Blynk.virtualWrite(V_FAN, FAN_HIGH);
-        }
-      }
-    }
-
-    Blynk.syncVirtual(V_FAN, V_TEMP);
-    flashLED(50, 10);
-  }
-
-}
-
-void setupBlynk() {
-  Blynk.begin(auth, ssid, pass);
-  // setup interval functions
-  timer.setInterval(UPDATE_INTERVAL, readTemp);
-  timer.setInterval(UPDATE_INTERVAL, handleTemperatureControl);
-}
-
-void setupGPIO() {
-  pinMode(WIFI_LED_GPIO, OUTPUT);
-  digitalWrite(WIFI_LED_GPIO, LOW);
-  pinMode(IR_GPIO, OUTPUT);
-}
-
 void sendFanUpdate(int fan) {
   ac.begin();
   switch (fan) {
@@ -230,6 +189,51 @@ void sendFanUpdate(int fan) {
     break;
   }
   ac.send();
+}
+
+bool isTooHumid() {
+  return humid > 60.0f;
+}
+
+void handleTemperatureControl() {
+
+  if (shouldHandleTemp) {
+    float tempDiffer = dht_temp - temp;
+    if (abs(tempDiffer) > 2) {
+      if (isTooHumid) {
+        Blynk.virtualWrite(V_FAN, FAN_HIGH);
+      } else {
+        if (tempDiffer < 0) {
+          // higher temp than desired
+          fan = FAN_LOW;
+          Blynk.virtualWrite(V_FAN, fan);
+          sendFanUpdate(fan);
+        } else {
+          // lower temp than desired.
+          fan = FAN_HIGH;
+          Blynk.virtualWrite(V_FAN, fan);
+          sendFanUpdate(fan);
+        }
+      }
+    }
+
+    Blynk.syncVirtual(V_FAN, V_TEMP);
+    flashLED(50, 10);
+  }
+
+}
+
+void setupBlynk() {
+  Blynk.begin(auth, ssid, pass);
+  // setup interval functions
+  timer.setInterval(UPDATE_INTERVAL, readTemp);
+  timer.setInterval(UPDATE_INTERVAL, handleTemperatureControl);
+}
+
+void setupGPIO() {
+  pinMode(WIFI_LED_GPIO, OUTPUT);
+  digitalWrite(WIFI_LED_GPIO, LOW);
+  pinMode(IR_GPIO, OUTPUT);
 }
 
 // Update temeprature value.
@@ -426,4 +430,6 @@ void loop() {
       pkuda_fan = false;
     }
   }
+
+
 }
