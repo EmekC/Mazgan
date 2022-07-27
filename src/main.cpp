@@ -53,6 +53,7 @@ DHT dht(TEMP_GPIO, DHTTYPE);
 #define AC_MODE V11
 #define MIN_TEMP 16
 #define MAX_TEMP 31
+#define V_HANDLE_TEMP V12
 #define UPDATE_INTERVAL 5000L
 // enums for Blynk Virtual Button
 #define FAN_LOW 0
@@ -70,9 +71,14 @@ u_int8_t temp_b;
 
 IRCoolixAC ac(IR_GPIO);
 
-int temp = MIN_TEMP;
-int fan = kCoolixFanMed;
+uint8_t temp = MIN_TEMP;
+float dht_temp = 21;
+float humid = 55.0;
+float hic = 21.0;
+uint8_t fan = kCoolixFanMed;
 uint8_t mode = kCoolixCool;
+uint8_t desiredHI = 22;
+bool shouldHandleTemp = true;
 
 #define BUTTON_COOLDOWN 1000L
 
@@ -114,12 +120,12 @@ void printState() {
 
 void readTemp() {
 
-  float temp = dht.readTemperature();
-  float humid = dht.readHumidity();
-  float hic = dht.computeHeatIndex(temp, humid, false);
+  dht_temp = dht.readTemperature();
+  humid = dht.readHumidity();
+  hic = dht.computeHeatIndex(temp, humid, false);
 
   // Write data to blynk
-  Blynk.virtualWrite(V_TEMP_SENSOR, temp);
+  Blynk.virtualWrite(V_TEMP_SENSOR, dht_temp);
   Blynk.virtualWrite(V_HUMIDITY, humid);
   Blynk.virtualWrite(V_HIC, hic);  
 
@@ -157,10 +163,35 @@ void turnOffAC() {
   printState();
 }
 
+void handleTemperatureControl() {
+
+  if (shouldHandleTemp) {
+    if ((desiredHI - hic) > 0) {
+      // check params and reduce.
+    } else {
+      // lower than 0
+      // how much degrees lower?
+      uint8_t deltaHI = abs(desiredHI - hic);
+    }
+    // 0%|-------------50%<--------------|100%
+   if (humid < 50) {
+
+    // 0%|------------------>60%-------------|100%
+   } else if (humid > 60) {
+
+    // 0%|------------->50%-------60%<--------------|100%
+   } else {
+
+   }
+  }
+
+}
+
 void setupBlynk() {
   Blynk.begin(auth, ssid, pass);
   // setup interval functions
   timer.setInterval(UPDATE_INTERVAL, readTemp);
+  timer.setInterval(UPDATE_INTERVAL, handleTemperatureControl);
 }
 
 void setupGPIO() {
@@ -340,6 +371,15 @@ BLYNK_WRITE(AC_MODE) {
   }
 
   printState();
+}
+
+// check for changes if temp should be controlled automatically.
+BLYNK_WRITE(V_HANDLE_TEMP) {
+  uint8_t value = param.asInt();
+
+  if (value != shouldHandleTemp) {
+    shouldHandleTemp = value;
+  }
 }
 
 void setup() {
