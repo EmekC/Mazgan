@@ -73,7 +73,7 @@ IRCoolixAC ac(IR_GPIO);
 
 uint8_t temp = MIN_TEMP;
 float dht_temp = 21;
-float humid = 55.0;
+float humid;
 float hic = 21.0;
 uint8_t fan = kCoolixFanMed;
 uint8_t mode = kCoolixCool;
@@ -105,10 +105,13 @@ void terminalBlynk(String str) {
 }
 
 // flash the leds for 100 ms to indicate something has happened.
-void flashLED() {
-  digitalWrite(WIFI_LED_GPIO, LOW);
-  delay(100);
-  digitalWrite(WIFI_LED_GPIO, HIGH);
+void flashLED(unsigned long time, unsigned int reps) {
+  for (uint8_t i=0; i<reps; i++) {
+    digitalWrite(WIFI_LED_GPIO, LOW);
+    delay(time);
+    digitalWrite(WIFI_LED_GPIO, HIGH);
+    delay(time);
+  }
 }
 
 void printState() {
@@ -129,7 +132,7 @@ void readTemp() {
   Blynk.virtualWrite(V_HIC, hic);  
 
   // flash led
-  flashLED();
+  flashLED(100, 1);
 }
 
 void setupAC() {
@@ -141,7 +144,7 @@ void setupAC() {
 }
 
 void turnOnAC() {
-  flashLED();
+  flashLED(100, 1);
 
   ac.begin();
   ac.setTemp(temp);
@@ -154,7 +157,7 @@ void turnOnAC() {
 }
 
 void turnOffAC() {
-  flashLED();
+  flashLED(100, 1);
   // ac.setPowerToggle(false);
   ac.begin();
   ac.off();
@@ -184,6 +187,8 @@ void handleTemperatureControl() {
       }
     }
 
+    Blynk.syncVirtual(V_FAN, V_TEMP);
+    flashLED(50, 10);
   }
 
 }
@@ -344,13 +349,9 @@ BLYNK_WRITE(V_FAN_BTN) {
 }
 
 // sync fan with Blynk
-// BLYNK_WRITE(V_FAN) {
-//   uint8_t value = param.asInt();
-
-//   Serial.println("fan is currently: " + value);
-
-//   fan = value;
-// }
+BLYNK_WRITE(V_FAN) {
+  uint8_t value = param.asInt();
+}
 
 
 // Cool/Heat mode switch
