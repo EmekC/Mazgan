@@ -51,9 +51,9 @@ DHT dht(TEMP_GPIO, DHTTYPE);
 #define V_FAN V9
 #define V_FAN_BTN V10
 #define AC_MODE V11
+#define V_HANDLE_TEMP V12
 #define MIN_TEMP 16
 #define MAX_TEMP 31
-#define V_HANDLE_TEMP V12
 #define UPDATE_INTERVAL 5000L
 // enums for Blynk Virtual Button
 #define FAN_LOW 0
@@ -77,7 +77,6 @@ float humid = 55.0;
 float hic = 21.0;
 uint8_t fan = kCoolixFanMed;
 uint8_t mode = kCoolixCool;
-uint8_t desiredHI = 22;
 bool shouldHandleTemp = true;
 
 #define BUTTON_COOLDOWN 1000L
@@ -163,26 +162,28 @@ void turnOffAC() {
   printState();
 }
 
+bool isTooHumid() {
+  return humid > 60.0f;
+}
+
 void handleTemperatureControl() {
 
   if (shouldHandleTemp) {
-    if ((desiredHI - hic) > 0) {
-      // check params and reduce.
-    } else {
-      // lower than 0
-      // how much degrees lower?
-      uint8_t deltaHI = abs(desiredHI - hic);
+    float tempDiffer = dht_temp - temp;
+    if (abs(tempDiffer) > 2) {
+      if (isTooHumid) {
+        Blynk.virtualWrite(V_FAN, FAN_HIGH);
+      } else {
+        if (tempDiffer < 0) {
+          // higher temp than desired
+          Blynk.virtualWrite(V_FAN, FAN_LOW);
+        } else {
+          // lower temp than desired.
+          Blynk.virtualWrite(V_FAN, FAN_HIGH);
+        }
+      }
     }
-    // 0%|-------------50%<--------------|100%
-   if (humid < 50) {
 
-    // 0%|------------------>60%-------------|100%
-   } else if (humid > 60) {
-
-    // 0%|------------->50%-------60%<--------------|100%
-   } else {
-
-   }
   }
 
 }
