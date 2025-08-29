@@ -13,9 +13,9 @@
 #include <Math.h>
 // ============= BLYNK =============
 
-#define BLYNK_TEMPLATE_ID           "TMPLx38mw3Vd"
-#define BLYNK_DEVICE_NAME           "AC"
-#define BLYNK_AUTH_TOKEN            "QJ_O6XQv4LF6r1Hu5Jbng6hHXls6mmRn"
+#define BLYNK_TEMPLATE_ID           ""
+#define BLYNK_DEVICE_NAME           ""
+#define BLYNK_AUTH_TOKEN            ""
 
 // Comment this out to disable prints and save space
 #define BLYNK_PRINT Serial
